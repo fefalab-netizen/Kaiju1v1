@@ -11,6 +11,8 @@ const keys={},objects=new Map(),unitObjects=new Map(),carObjects=new Map(),effec
 const grips=[],controllers=[],handVisuals=[],desktopHands=[],particles=[];
 let particleGeometry,particleCloud,fire;
 const sharedBox=new THREE.BoxGeometry(1,1,1);
+// Model fingers +Y -> controller forward -Z; palm -Z -> down -Y.
+const handGripRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
 function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',2600);}
 function send(data){if(ws?.readyState===1)ws.send(JSON.stringify(data));}
 function unlockAudio(){if(!audioContext){try{audioContext=new (window.AudioContext||window.webkitAudioContext)();noiseBuffer=audioContext.createBuffer(1,audioContext.sampleRate*.4,audioContext.sampleRate);const a=noiseBuffer.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*(1-i/a.length);}catch{sound=false;}}audioContext?.resume().catch(()=>{});}
@@ -158,7 +160,7 @@ function setup3D(){
    const tracked=!!session&&grip.visible&&!!controllers[i].userData.source;handVisuals[i].visible=tracked;desktopHands[i].visible=!session;
    if(!tracked)return null;
    let x=grip.position.x*5,z=grip.position.z*5;const n=Math.max(1,Math.hypot(x,z)/8.8);x/=n;z/=n;const y=Math.max(.2,Math.min(17.8,8+(grip.position.y-1.3)*3));
-   handVisuals[i].position.set(x,y-8,z);handVisuals[i].quaternion.copy(grip.quaternion);return {x,y,z};
+   handVisuals[i].position.set(x,y-8,z);handVisuals[i].quaternion.copy(grip.quaternion).multiply(handGripRotation);return {x,y,z};
   });
   if(now-sent>50&&state.phase==='playing'&&!paused){const x=mx*Math.cos(yaw)+mz*Math.sin(yaw),z=-mx*Math.sin(yaw)+mz*Math.cos(yaw);send({type:'move',x,z,yaw});if(session)send({type:'hands',poses});sent=now;}
   for(let i=0;i<2;i++){const held=state.cars.some(c=>c.status==='held'&&c.hand===i);handVisuals[i].userData.animate(held,dt);desktopHands[i].userData.animate(held,dt);}
@@ -205,4 +207,5 @@ function renderEffects(){
  for(const [id,mesh]of effectObjects)if(!state.effects.some(e=>e.id===id)){scene.remove(mesh);disposeGroup(mesh);effectObjects.delete(id);}
 }
 window.addEventListener('resize',()=>{if(role==='defender'&&state)drawMap();});
+
 
