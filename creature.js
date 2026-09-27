@@ -50,3 +50,53 @@ export function createBreath(scene){
  };
 }
 
+// Cosmetic embodiment only: controller poses sent to the server stay untouched.
+export function createBody(rig){
+ const root=new THREE.Group();rig.add(root);
+ const skin=new THREE.MeshStandardMaterial({color:0x477d36,roughness:.92});
+ const belly=new THREE.MeshStandardMaterial({color:0x8eaa60,roughness:1});
+ const armor=new THREE.MeshStandardMaterial({color:0x304f2a,roughness:.9});
+ const geo=new THREE.SphereGeometry(1,12,8),boneGeo=new THREE.CylinderGeometry(1,1,1,10);
+ const up=new THREE.Vector3(0,1,0),delta=new THREE.Vector3(),wrist=new THREE.Vector3();
+ function lump(parent,x,y,z,sx,sy,sz,mat=skin){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;}
+ const torso=new THREE.Group();root.add(torso);
+ lump(torso,0,-3.3,.9,1.7,2.3,1.05);
+ for(let i=0;i<5;i++)lump(torso,0,-1.8-i*.63,-.04,1.13-i*.05,.35,.22,belly);
+ for(let i=0;i<5;i++)lump(torso,0,-1.7-i*.7,1.9,.3,.45,.35,armor);
+ const feet=[],arms=[];
+ for(let i=0;i<2;i++){
+  const side=i===0?-1:1;
+  lump(root,side*.85,-5.7,.8,.7,1.45,.65);
+  const foot=new THREE.Group();foot.position.set(side*.85,-7.55,.1);root.add(foot);feet.push(foot);
+  lump(foot,0,0,-.3,.75,.4,1.1);for(let j=0;j<3;j++)lump(foot,(j-1)*.4,-.05,-1.2,.16,.16,.35,belly);
+  const group=new THREE.Group();root.add(group);
+  const shoulder=lump(group,0,0,0,.66,.7,.66),elbow=lump(group,0,0,0,.48,.48,.48);
+  const upper=new THREE.Mesh(boneGeo,skin),lower=new THREE.Mesh(boneGeo,skin);group.add(upper,lower);
+  arms.push({group,shoulder,elbow,upper,lower});
+ }
+ let phase=0,lastX=null,lastZ=null,footIndex=0,stepDistance=0,walkSpeed=0;
+ function segment(mesh,a,b,radius){delta.subVectors(b,a);mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.scale.set(radius,Math.max(.01,delta.length()),radius);mesh.quaternion.setFromUnitVectors(up,delta.normalize());}
+ return {root,
+  reset(){lastX=lastZ=null;phase=stepDistance=walkSpeed=0;},
+  update(dt,hands,k,stomp,now,onStep){
+   root.visible=true;
+   const travel=lastX===null?0:Math.hypot(k.x-lastX,k.z-lastZ);lastX=k.x;lastZ=k.z;
+   walkSpeed=travel>.001&&travel<2?Math.min(8,travel/.05):walkSpeed*Math.exp(-dt*8);
+   phase+=walkSpeed*dt*1.7;
+   if(travel<2){stepDistance+=travel;if(stepDistance>2.5){stepDistance=0;footIndex=1-footIndex;onStep();}}
+   const walking=walkSpeed>.1;
+   torso.scale.x=1+Math.sin(now*.0018)*.012;torso.position.y=-stomp*.16;
+   feet.forEach((foot,i)=>{foot.position.y=-7.55+(walking?Math.max(0,Math.sin(phase+i*Math.PI))*.3:0)+(i===footIndex?stomp*.65:0);foot.position.z=.1+(walking?Math.cos(phase+i*Math.PI)*.3:0);});
+   root.updateWorldMatrix(true,true);
+   hands.forEach((hand,i)=>{
+    const a=arms[i];a.group.visible=hand.visible;if(!hand.visible)return;
+    // Resolve the animated wrist, including mirrored left-hand geometry.
+    hand.children[0].updateWorldMatrix(true,false);wrist.set(0,-.78,0);hand.children[0].localToWorld(wrist);root.worldToLocal(wrist);
+    const side=hand.children[0].scale.x<0?-1:1,shoulder=new THREE.Vector3(side*1.45,-1.6,.65);
+    const bend=shoulder.clone().lerp(wrist,.48);bend.x+=side*.55;bend.y-=.65;bend.z+=.45;
+    a.shoulder.position.copy(shoulder);a.elbow.position.copy(bend);segment(a.upper,shoulder,bend,.48);segment(a.lower,bend,wrist,.35);
+   });
+  }
+ };
+}
+

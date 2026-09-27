@@ -78,7 +78,7 @@ export function command(g,role,c){
   if(!['smash','stomp','breath'].includes(c.type))return 'Unknown attack';if(g.cool[c.type]>0)return 'Attack cooling down';
   if(g.kaiju.blocking)return 'Lower your guard to attack';if(g.kaiju.stamina<ATTACK_COST[c.type])return 'Not enough stamina';g.kaiju.stamina-=ATTACK_COST[c.type];
   const k=g.kaiju,fx=-Math.sin(k.yaw),fz=-Math.cos(k.yaw);
-  if(c.type==='smash'){damage(g,k.x+fx*5,k.z+fz*5,7,45);g.cool.smash=.65;effect(g,'smash',k.x+fx*5,k.z+fz*5,7);}
+  if(c.type==='smash'){damage(g,k.x+fx*5,k.z+fz*5,7,45);g.cool.smash=.65;effect(g,'smash',k.x+fx*5,k.z+fz*5,7,0,{hand:c.hand===0?0:1});}
   if(c.type==='stomp'){damage(g,k.x,k.z,12,65);g.cool.stomp=7;effect(g,'stomp',k.x,k.z,12);}
   if(c.type==='breath'){for(const b of [...g.buildings,...g.units]){const dx=b.x-k.x,dz=b.z-k.z,d=Math.hypot(dx,dz);if(d<28&&d>0&&(dx*fx+dz*fz)/d>.86)hit(g,b,75);}g.cool.breath=12;effect(g,'breath',k.x+fx*14,k.z+fz*14,12,9,{originX:k.x,originZ:k.z,yaw:k.yaw});}
  }else if(role==='defender'){

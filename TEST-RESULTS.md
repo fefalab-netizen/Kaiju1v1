@@ -11,3 +11,5 @@
 
 
 Strategic combat update: no automated tests or browser/headset playtests run, per user preference. Earlier passing results apply to the preceding build only. New facility balance, stamina/block controls, repair crews and feedback need playtesting.
+
+VR embodiment update: no automated tests, browser checks, or headset tests run, as requested. Changes reviewed as source only; earlier test results do not validate this build.

@@ -37,3 +37,5 @@
 #roster{display:flex;gap:6px;overflow-x:auto;margin-top:7px}#roster:empty{display:none}#roster button{white-space:nowrap;font:10px ui-monospace,monospace;min-height:36px;padding:6px 10px}.defender #view{min-height:450px}@media(max-width:600px){.defender #view{min-height:420px}}
 
 #strategy,#combat,#feedback{padding:8px 4%;background:#112733;color:#ffd079;font:13px monospace;line-height:1.5}#combat{color:#89e5c4}#feedback{min-height:20px;color:#ff9678}#strategy{border-bottom:1px solid #46616b}
+
+#vr-comfort{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}#vr-comfort button{font-size:12px;padding:8px 12px}

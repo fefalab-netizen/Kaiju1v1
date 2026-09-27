@@ -128,3 +128,12 @@ Three existing city blocks are now marked POWER, HOSPITAL and EVAC, in both VR a
 - Combat feedback includes animated tracer rounds, directional damage/block messages in desktop and VR HUDs, hit confirmations, distinct synthesized sound cues, extra collapse debris, and facility-loss alerts. Tracers visualize server-resolved hits; they are not dodgeable simulated projectiles.
 
 This update was not test-run, following the user's preference to playtest personally. Intro video, themed main page, tutorials and rematch flow are reserved for the next stage.
+
+## VR embodiment update
+The VR player now has a rudimentary green torso, segmented arms connected to the tracked wrists, legs and clawed feet. Looking down reveals the body. Walking gives the feet a small cosmetic gait and plays low footstep thumps. No camera bob or forced headset shake is added. The body can be hidden with the VR body button before entering VR.
+
+Server-confirmed smash animates an available fist; stomp briefly braces the hands and lifts a foot. Held hands keep their grip. These are cosmetic animations: raw controller poses, reach, damage timing and throw physics are unchanged. Frontal block curls empty fists and displays a blue guard arc. A green center hit marker confirms contact; orange incoming-hit arcs and blue blocked-hit arcs follow the actual headset viewing direction. Direction labels remain in the HUD.
+
+Dedicated low-frequency stomp and smash sounds, quieter movement thumps, and controller haptics add weight. The existing Sound button mutes all sounds. Haptics are used only when supported. VR turns default to 30-degree snap turning; the VR turn button before entering VR switches to smooth turning. Controller hand mirroring follows the device's reported handedness.
+
+No tests were run for this update, at the user's request. Body proportions, wrist connections, animation feel, audio levels, headset performance and comfort await user playtesting.
