@@ -137,3 +137,12 @@ Server-confirmed smash animates an available fist; stomp briefly braces the hand
 Dedicated low-frequency stomp and smash sounds, quieter movement thumps, and controller haptics add weight. The existing Sound button mutes all sounds. Haptics are used only when supported. VR turns default to 30-degree snap turning; the VR turn button before entering VR switches to smooth turning. Controller hand mirroring follows the device's reported handedness.
 
 No tests were run for this update, at the user's request. Body proportions, wrist connections, animation feel, audio levels, headset performance and comfort await user playtesting.
+
+## City Command interface
+The main page uses the promotional poster, two role choices and explicit Create/Join modes. Create generates a six-character room code; join checks that a room exists. After joining, Invite player opens a share link and a locally generated QR code. Use a deployed HTTPS or LAN address for other devices; localhost links work only on the host device. Joining an invite still requires choosing a role. Room occupancy is shown after joining.
+
+The responsive commander interface has facility health cards (tap to center map), a unit roster, Units/Abilities/Orders categories, health/task details, and cost explanations. Deployments and move orders use a map preview and explicit confirmation. Drag to pan; pinch, mouse wheel, or +/− to zoom. Reset view returns to the whole city. Desktop shortcuts: 1 tank, 2 turret, 3 repair crew, 4 repair ability, 5 missile, 6 freeze, V select, Escape cancel. No combat rules were changed.
+
+QR encoding is bundled from https://github.com/kazuhikoarase/qrcode-generator (MIT; QR-LICENSE.txt). No external QR service receives room links. Cinematic poster art is labeled as promotional art. Intro video integration is pending the user's video file; no autoplay placeholder or video download is included.
+
+No tests, browser checks or headset checks were run for this interface update, as requested.
