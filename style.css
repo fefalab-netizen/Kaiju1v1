@@ -1,2 +1,37 @@
 *{box-sizing:border-box}body{margin:0;background:#0b1119;color:#e6eef3;font:15px system-ui,sans-serif}header{height:64px;padding:20px 4vw;border-bottom:1px solid #293442;display:flex;justify-content:space-between;letter-spacing:2px;font-size:13px}.orange,em{color:#ff7749}em{font-style:normal}.muted,small{color:#91a3b7}.eyebrow{color:#56e3c6;letter-spacing:3px;font-size:11px}#lobby{max-width:960px;padding:7vh 5vw;margin:auto}h1{font-size:clamp(42px,7vw,78px);line-height:1.02;letter-spacing:-3px;margin:22px 0}p{line-height:1.7;color:#afbfcc}label{display:block;font-size:11px;letter-spacing:2px;margin-top:28px}input{display:block;margin:8px 0 18px;padding:14px;background:#131f2b;color:white;border:1px solid #405468;border-radius:6px;font-size:22px;letter-spacing:4px;width:100%;max-width:410px}button{background:#182737;color:#edf5ff;border:1px solid #40566a;border-radius:6px;padding:14px 18px;cursor:pointer;font-weight:700;min-height:48px}button:hover,button.active{border-color:#ff885b;background:#43302b}button:disabled{opacity:.45;cursor:default}.roles{display:flex;gap:12px;flex-wrap:wrap}.roles button{text-align:left;min-width:250px}.roles small{display:block;margin-top:8px;font-weight:400}.stats{display:flex;justify-content:space-around;padding:15px;gap:12px;background:#101b27}.stats small{font-size:9px;letter-spacing:1px;display:block}.stats strong{display:block;font-size:26px;margin-top:4px}#view{height:calc(100dvh - 275px);min-height:300px;position:relative;background:#111e2b}#view>canvas{display:block;width:100%;height:100%;touch-action:none}#overlay{position:absolute;top:14px;left:16px;right:16px;pointer-events:none;text-shadow:0 2px 4px black}#overlay button{pointer-events:auto;margin:10px 8px 0 0}#joinInfo{font-size:12px;margin-top:5px}footer{padding:14px 4vw}#controls{display:flex;gap:8px;flex-wrap:wrap}#controls button{flex:1}#hint{margin:8px 0;font-size:12px}#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#ff7749;color:#111;padding:12px 20px;border-radius:6px;display:none;z-index:10}body>button{z-index:5}@media(max-width:600px){header{font-size:10px;letter-spacing:1px}.stats strong{font-size:21px}.stats small{font-size:8px}#controls{gap:5px}#controls button{padding:10px 5px;font-size:11px}#view{height:calc(100dvh - 300px)}.roles button{width:100%}}
 [hidden]{display:none!important}
+
+#interaction{margin-top:10px;color:#ffc888;font-size:12px;letter-spacing:1px}
+#sound{min-height:32px;padding:6px 12px;font-size:11px;margin-right:10px}
+#intel{display:flex;justify-content:space-between;gap:8px;padding:12px 4vw;background:#132b38;color:#8ccbc8;font:10px ui-monospace,monospace;letter-spacing:1px;border-top:1px solid #41616e;border-bottom:1px solid #41616e}
+#command-panel{margin-bottom:12px}
+#dispatch{font:10px ui-monospace,monospace;letter-spacing:1.4px;color:#eab783;border-left:3px solid #ff885b;padding:8px 10px;background:#24312f;margin-bottom:10px}
+.order-row{display:flex;align-items:center;gap:6px}
+#unit-status{font:10px ui-monospace,monospace;color:#9dc6cd;flex:1;line-height:1.5}
+.order-row button{font-size:11px;min-height:40px;padding:8px 12px}
+.defender{background:#07131f}
+.defender header{background:#0b2030;border-bottom:1px solid #4c6c76}
+.defender .stats{background:linear-gradient(135deg,#163647,#0a202f);border-bottom:1px solid #274d5b}
+.defender .stats strong{font-family:ui-monospace,monospace;color:#bce6dd;text-shadow:0 0 18px #61c5bd35}
+.defender #health{color:#ffb782}
+.defender .stats small{color:#91bac7}
+.defender #view{height:calc(100dvh - 420px);min-height:420px;border-bottom:1px solid #41616e}
+.defender #overlay{top:10px;font-family:ui-monospace,monospace}
+.defender #status{font-size:13px;color:#e4f5df}
+.defender #joinInfo{font-size:10px;color:#87b8c4}
+.defender footer{background:linear-gradient(#112b3b,#0a1b29);border-top:3px solid #233e4f}
+.defender #controls{display:grid;grid-template-columns:repeat(6,1fr)}
+.defender #controls button{background:linear-gradient(#244c61,#193547);border:1px solid #426d80;border-bottom:3px solid #0a1824;border-radius:3px;min-height:52px;font-family:ui-monospace,monospace}
+.defender #controls button.active{background:linear-gradient(#634532,#352d28);border-color:#eeaf6a;color:#ffe2af;box-shadow:inset 0 2px #ffd09c}
+.defender #hint{color:#aac6d0}
+@media(max-width:600px){
+ .defender #controls{grid-template-columns:repeat(3,1fr)}
+ .defender #view{height:calc(100dvh - 430px);min-height:380px}
+ .defender #intel{font-size:8px;padding:9px 12px;letter-spacing:.6px}
+ .defender footer{padding:10px 12px}
+ .defender #hint{font-size:10px;line-height:1.5}
+ .defender header{height:52px;padding-top:18px}
+ .defender .stats{padding:10px}
+ .kaiju #controls button{min-width:42%}
+}
+#roster{display:flex;gap:6px;overflow-x:auto;margin-top:7px}#roster:empty{display:none}#roster button{white-space:nowrap;font:10px ui-monospace,monospace;min-height:36px;padding:6px 10px}.defender #view{min-height:450px}@media(max-width:600px){.defender #view{min-height:420px}}
