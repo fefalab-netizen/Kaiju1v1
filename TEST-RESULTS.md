@@ -9,3 +9,5 @@
 
 3D hands/fire update: all 13 Node tests pass, including mirrored volumetric hands, grab curl/reopen, and authoritative breath effect origin/direction. Client/module syntax checks pass. Browser visual verification was inconclusive because preview interaction did not reliably enter the kaiju view; no headset validation performed.
 
+
+Strategic combat update: no automated tests or browser/headset playtests run, per user preference. Earlier passing results apply to the preceding build only. New facility balance, stamina/block controls, repair crews and feedback need playtesting.

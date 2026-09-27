@@ -115,3 +115,16 @@ For hardware acceptance: test both hands, punch building edges, grab/release wit
 ## 3D hands and fire breath
 Hands now use articulated green mesh geometry with raised scales and claws. Grip (or desktop R) closes the fingers around a held car; releasing opens them. Breath (A/X or E) emits a capped, additive fire particle stream and warm local light using the server-confirmed attack origin and direction. Damage and cooldowns are unchanged. The hands follow controller rotation in VR; headset comfort, orientation, and frame rate still require hardware testing.
 
+
+## Strategic combat update
+Three existing city blocks are now marked POWER, HOSPITAL and EVAC, in both VR and the defender map. Destroy all three OR 60% of the city to win as kaiju. The defender wins by defeating the kaiju or completing the evacuation countdown.
+
+- Power lost: stationary turrets fire every 2 seconds instead of every second.
+- Hospital lost: crew repairs drop from 8 to 4 HP per second; instant repair drops from 45 to 22 HP. Destroyed buildings cannot be restored.
+- Evacuation center lost: countdown runs at half speed. Remaining display is evacuation work remaining, not wall-clock time.
+- Repair crew costs 40 credits, has 65 HP, automatically travels to damaged buildings and repairs within 6m. Select/Move, Hold and Auto also work for crews. Crews do not shoot. Tanks pursue; turrets remain stationary.
+- Kaiju has 100 stamina, regenerating 12/second outside block. Smash costs 8, physical punch contact 6, stomp 30, breath 40.
+- Toggle frontal block with desktop B, the Block button, or right VR thumbstick click. Block reduces frontal incoming damage by 75%, drains 18 stamina/second, slows movement, and prevents punches/smash/stomp/breath. Rear attacks bypass it. Guard drops when input goes stale or the player disconnects.
+- Combat feedback includes animated tracer rounds, directional damage/block messages in desktop and VR HUDs, hit confirmations, distinct synthesized sound cues, extra collapse debris, and facility-loss alerts. Tracers visualize server-resolved hits; they are not dodgeable simulated projectiles.
+
+This update was not test-run, following the user's preference to playtest personally. Intro video, themed main page, tutorials and rematch flow are reserved for the next stage.
