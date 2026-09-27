@@ -1,12 +1,25 @@
 import * as THREE from 'three';
 
+// Irregular charcoal bands follow the mesh, including animated fingers and arms.
+// Vertex colors keep these markings in the existing draw calls.
+function stripedGeometry(geometry){
+ const positions=geometry.attributes.position,colors=new Float32Array(positions.count*3);
+ for(let i=0;i<positions.count;i++){
+  const x=positions.getX(i),y=positions.getY(i),z=positions.getZ(i);
+  const wave=Math.sin(y*17+Math.sin(Math.atan2(z,x)*3)*.85+x*.5);
+  const shade=wave>.55?.12:wave>.25?.4:1;
+  colors[i*3]=shade;colors[i*3+1]=shade;colors[i*3+2]=shade;
+ }
+ geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));return geometry;
+}
+
 // Local hand coordinates: fingers +Y, knuckles +Z, palm -Z.
 export function createHand(left=false){
  const root=new THREE.Group(),model=new THREE.Group();root.add(model);model.scale.x=left?-1:1;
- const skin=new THREE.MeshStandardMaterial({color:0x477d36,roughness:.92});
- const scales=new THREE.MeshStandardMaterial({color:0x75964b,roughness:.8});
- const claw=new THREE.MeshStandardMaterial({color:0xd8cc98,roughness:.5});
- const sphere=new THREE.SphereGeometry(1,12,8),scaleGeo=new THREE.IcosahedronGeometry(1,0);
+ const skin=new THREE.MeshStandardMaterial({color:0x24472a,roughness:.92,vertexColors:true});
+ const scales=new THREE.MeshStandardMaterial({color:0x3b6237,roughness:.85});
+ const claw=new THREE.MeshStandardMaterial({color:0x85836d,roughness:.5});
+ const sphere=stripedGeometry(new THREE.SphereGeometry(1,16,16)),scaleGeo=new THREE.IcosahedronGeometry(1,0);
  function lump(parent,x,y,z,sx,sy,sz,mat=skin){const m=new THREE.Mesh(sphere,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;}
  lump(model,0,0,0,.64,.72,.3);lump(model,0,-.64,0,.43,.42,.27);
  // Raised overlapping scales are geometry, visible from either eye and at grazing angles.
@@ -53,10 +66,10 @@ export function createBreath(scene){
 // Cosmetic embodiment only: controller poses sent to the server stay untouched.
 export function createBody(rig){
  const root=new THREE.Group();rig.add(root);
- const skin=new THREE.MeshStandardMaterial({color:0x477d36,roughness:.92});
- const belly=new THREE.MeshStandardMaterial({color:0x8eaa60,roughness:1});
- const armor=new THREE.MeshStandardMaterial({color:0x304f2a,roughness:.9});
- const geo=new THREE.SphereGeometry(1,12,8),boneGeo=new THREE.CylinderGeometry(1,1,1,10);
+ const skin=new THREE.MeshStandardMaterial({color:0x24472a,roughness:.92,vertexColors:true});
+ const belly=new THREE.MeshStandardMaterial({color:0x415538,roughness:1});
+ const armor=new THREE.MeshStandardMaterial({color:0x101b16,roughness:.9});
+ const geo=stripedGeometry(new THREE.SphereGeometry(1,16,16)),boneGeo=stripedGeometry(new THREE.CylinderGeometry(1,1,1,12,16));
  const up=new THREE.Vector3(0,1,0),delta=new THREE.Vector3(),wrist=new THREE.Vector3();
  function lump(parent,x,y,z,sx,sy,sz,mat=skin){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;}
  const torso=new THREE.Group();root.add(torso);
@@ -99,4 +112,5 @@ export function createBody(rig){
   }
  };
 }
+
 
