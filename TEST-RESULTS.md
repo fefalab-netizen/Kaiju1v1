@@ -6,3 +6,6 @@
 - Browser playtest: both roles joined, car pickup and throw were reflected in both views, a tank was deployed and selected through the roster, a destination order was issued and the tank reached HOLDING POSITION, and a turret was deployed.
 - Desktop and 390 × 844 mobile layouts visually inspected with the generated artwork. Browser logs showed no JavaScript errors or asset fallback warnings during the successful playtest.
 - Actual headset tracking, controller vibration, physical throwing feel, and real-phone network conditions remain hardware-unverified. The Dockerfile includes assets but has not been built in this environment.
+
+3D hands/fire update: all 13 Node tests pass, including mirrored volumetric hands, grab curl/reopen, and authoritative breath effect origin/direction. Client/module syntax checks pass. Browser visual verification was inconclusive because preview interaction did not reliably enter the kaiju view; no headset validation performed.
+

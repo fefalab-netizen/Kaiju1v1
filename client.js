@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createHand,createBreath} from './creature.js';
 import {VRButton} from 'three/addons/webxr/VRButton.js';
 import {sprites,facade,assetsReady} from './sprites.js';
 await assetsReady;
@@ -8,7 +9,7 @@ let ws,role,state,selected='tank',selectedUnit=null,yaw=0,pitch=-.25,renderer,sc
 let toastTimer,audioContext,noiseBuffer,sound=true,lastSound=0,lastElapsed=0,shake=0,attackAnim=0;
 const keys={},objects=new Map(),unitObjects=new Map(),carObjects=new Map(),effectObjects=new Map(),seenEffects=new Set();
 const grips=[],controllers=[],handVisuals=[],desktopHands=[],particles=[];
-let particleGeometry,particleCloud;
+let particleGeometry,particleCloud,fire;
 const sharedBox=new THREE.BoxGeometry(1,1,1);
 function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',2600);}
 function send(data){if(ws?.readyState===1)ws.send(JSON.stringify(data));}
@@ -78,6 +79,7 @@ function consumeEffects(){
   if(['collapse','impact','punch','carImpact','stomp','smash','breath'].includes(e.type)){
    const big=['collapse','carImpact','stomp'].includes(e.type);impactSound(big);
    if(role==='kaiju'&&scene){spawnParticles(e,big?26:9);shake=Math.max(shake,big?.2:.07);const source=controllers[e.hand]?.userData.source;if(source)source.gamepad?.hapticActuators?.[0]?.pulse(.5,65)?.catch(()=>{});}
+   if(e.type==='breath'&&fire)fire.emit(e);
    if(e.type==='collapse')$('dispatch').textContent='BLOCK LOST · REROUTE DEFENSE';
    if(e.type==='carImpact')$('dispatch').textContent='VEHICLE IMPACT DETECTED';
   }
@@ -109,7 +111,7 @@ const buildingMaterials=Array.from({length:3},(_,v)=>Array.from({length:3},(_,da
 function box(w,h,d,color){const mesh=new THREE.Mesh(sharedBox,new THREE.MeshStandardMaterial({color,roughness:.85}));mesh.scale.set(w,h,d);return mesh;}
 function sprite(name,size){const mesh=new THREE.Sprite(new THREE.SpriteMaterial({map:spriteTextures[name],transparent:true,alphaTest:.1}));mesh.scale.set(size,size,1);return mesh;}
 function disposeGroup(group){group.traverse(m=>{if(m.material){if(Array.isArray(m.material))m.material.forEach(x=>x.dispose());else m.material.dispose();}if(m.geometry&&m.geometry!==sharedBox)m.geometry.dispose();});}
-function clearTransient(){particles.length=0;for(const collection of [unitObjects,carObjects,effectObjects]){for(const mesh of collection.values()){scene?.remove(mesh);disposeGroup(mesh);}collection.clear();}for(const mesh of objects.values()){mesh.userData.hp=100;mesh.userData.flashUntil=0;}shake=0;$('dispatch').textContent='CITY DEFENSE NETWORK · ONLINE';}
+function clearTransient(){fire?.clear();particles.length=0;for(const collection of [unitObjects,carObjects,effectObjects]){for(const mesh of collection.values()){scene?.remove(mesh);disposeGroup(mesh);}collection.clear();}for(const mesh of objects.values()){mesh.userData.hp=100;mesh.userData.flashUntil=0;}shake=0;$('dispatch').textContent='CITY DEFENSE NETWORK · ONLINE';}
 function spawnParticles(e,count){
  for(let i=0;i<count&&particles.length<240;i++){const angle=Math.random()*Math.PI*2,speed=2+Math.random()*7;particles.push({x:e.x,y:Math.max(1,e.y||1),z:e.z,vx:Math.cos(angle)*speed,vy:2+Math.random()*7,vz:Math.sin(angle)*speed,life:.5+Math.random()});}
 }
@@ -127,8 +129,8 @@ function setup3D(){
   controller.addEventListener('squeezestart',()=>send({type:'grab',hand:i}));
   controller.addEventListener('squeezeend',()=>{send({type:'throw',hand:i});});
   const grip=renderer.xr.getControllerGrip(i);grips.push(grip);rig.add(grip);
-  const visual=sprite(i===0?'handLeft':'hand',2.2);handVisuals.push(visual);rig.add(visual);
-  const desktop=sprite(i===0?'handLeft':'hand',.64);desktop.material.depthTest=false;desktop.renderOrder=90;desktop.position.set(i===0?-.65:.65,-.49,-1);camera.add(desktop);desktopHands.push(desktop);
+  const visual=createHand(i===0);visual.scale.setScalar(1.25);handVisuals.push(visual);rig.add(visual);
+  const desktop=createHand(i===0);desktop.scale.setScalar(.3);desktop.position.set(i===0?-.55:.55,-.5,-1.25);desktop.rotation.set(-.2, i===0?-.2:.2, i===0?-.15:.15);camera.add(desktop);desktopHands.push(desktop);
  }
  const vrButton=VRButton.createButton(renderer);document.querySelector('footer').append(vrButton);Object.assign(vrButton.style,{position:'static',transform:'none',marginTop:'8px',width:'auto'});
  renderer.xr.addEventListener('sessionstart',()=>{pitch=0;camera.rotation.set(0,0,0);});
@@ -143,6 +145,7 @@ function setup3D(){
  const hud=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.5),new THREE.MeshBasicMaterial({map:hudTexture,transparent:true,depthTest:false}));hud.position.set(0,-.6,-2);hud.renderOrder=99;camera.add(hud);
  particleGeometry=new THREE.BufferGeometry();particleGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(240*3),3));particleGeometry.setDrawRange(0,0);
  particleCloud=new THREE.Points(particleGeometry,new THREE.PointsMaterial({color:0xe5b88b,size:.55,transparent:true,opacity:.8}));particleCloud.frustumCulled=false;scene.add(particleCloud);
+ fire=createBreath(scene);
  let last=0,sent=0,buttons={breath:false,stomp:false},hudTime=0;
  renderer.setAnimationLoop(now=>{
   const dt=Math.min(.05,(now-last)/1000||0);last=now;if(!state)return;
@@ -155,10 +158,12 @@ function setup3D(){
    const tracked=!!session&&grip.visible&&!!controllers[i].userData.source;handVisuals[i].visible=tracked;desktopHands[i].visible=!session;
    if(!tracked)return null;
    let x=grip.position.x*5,z=grip.position.z*5;const n=Math.max(1,Math.hypot(x,z)/8.8);x/=n;z/=n;const y=Math.max(.2,Math.min(17.8,8+(grip.position.y-1.3)*3));
-   handVisuals[i].position.set(x,y-8,z);return {x,y,z};
+   handVisuals[i].position.set(x,y-8,z);handVisuals[i].quaternion.copy(grip.quaternion);return {x,y,z};
   });
   if(now-sent>50&&state.phase==='playing'&&!paused){const x=mx*Math.cos(yaw)+mz*Math.sin(yaw),z=-mx*Math.sin(yaw)+mz*Math.cos(yaw);send({type:'move',x,z,yaw});if(session)send({type:'hands',poses});sent=now;}
-  attackAnim=Math.max(0,attackAnim-dt);desktopHands[1].position.z=-1-Math.sin(attackAnim/.3*Math.PI)*.4;
+  for(let i=0;i<2;i++){const held=state.cars.some(c=>c.status==='held'&&c.hand===i);handVisuals[i].userData.animate(held,dt);desktopHands[i].userData.animate(held,dt);}
+  fire.update(paused?0:dt);
+  attackAnim=Math.max(0,attackAnim-dt);desktopHands[1].position.z=-1.25-Math.sin(attackAnim/.3*Math.PI)*.4;
   shake=Math.max(0,shake-dt);if(!session){camera.position.set(shake?Math.sin(now*.07)*shake*.12:0,0,0);camera.rotation.set(pitch,0,0);}
   hud.visible=!!session;
   if(session&&now-hudTime>150){hudTime=now;const ctx=hudCanvas.getContext('2d');ctx.clearRect(0,0,1024,320);ctx.fillStyle='#0b1119dd';ctx.fillRect(0,0,1024,320);ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.fillText($('status').textContent.slice(0,48),25,48);ctx.font='30px sans-serif';ctx.fillText('HP '+Math.ceil(state.kaiju.hp)+'   City '+$('damage').textContent+' / 60%   '+$('time').textContent,25,102);ctx.fillText('Smash '+state.cool.smash.toFixed(1)+'s   Stomp '+state.cool.stomp.toFixed(1)+'s   Breath '+state.cool.breath.toFixed(1)+'s',25,156);ctx.font='24px sans-serif';ctx.fillText('Swing: punch | Grip: grab/release car | A/X: breath | B/Y: stomp',25,210);ctx.fillStyle='#ffbb79';ctx.fillText($('interaction').textContent,25,266);hudTexture.needsUpdate=true;}
@@ -192,7 +197,7 @@ function renderCars(dt){
  for(const car of state.cars){
   let mesh=carObjects.get(car.id);if(!mesh){mesh=new THREE.Group();const body=box(1.3,.65,2.5,[0xc46240,0xbaa24f,0x6b9bac][car.id%3]);mesh.add(body);const cab=box(1.1,.5,1.2,0x8cbdca);cab.position.set(0,.5,-.1);mesh.add(cab);for(const x of [-.66,.66])for(const z of [-.8,.8]){const wheel=box(.25,.45,.5,0x16232a);wheel.position.set(x,-.2,z);mesh.add(wheel);}scene.add(mesh);carObjects.set(car.id,mesh);}
   mesh.position.set(car.x,car.y,car.z);if(car.status==='flying')mesh.rotation.x+=dt*8;else mesh.rotation.set(0,car.id%2?Math.PI/2:0,car.status==='wreck'?.35:0);
-  mesh.scale.setScalar(car.status==='wreck'?.7:1);if(car.status==='wreck')mesh.children[0].material.color.setHex(0x4e4944);
+  if(car.status==='held'){const hand=renderer.xr.isPresenting?handVisuals[car.hand]:desktopHands[car.hand];hand.updateWorldMatrix(true,false);mesh.position.copy(hand.localToWorld(new THREE.Vector3(0,.35,-.4)));hand.getWorldQuaternion(mesh.quaternion);mesh.scale.setScalar(renderer.xr.isPresenting?.75:.18);}else mesh.scale.setScalar(car.status==='wreck'?.7:1);if(car.status==='wreck')mesh.children[0].material.color.setHex(0x4e4944);
  }
 }
 function renderEffects(){
@@ -200,3 +205,4 @@ function renderEffects(){
  for(const [id,mesh]of effectObjects)if(!state.effects.some(e=>e.id===id)){scene.remove(mesh);disposeGroup(mesh);effectObjects.delete(id);}
 }
 window.addEventListener('resize',()=>{if(role==='defender'&&state)drawMap();});
+

@@ -111,3 +111,7 @@ npm test
 The suite covers original match rules plus hand reach/speed/cooldown, stale samples, car ownership/trajectory/impact, tank move/hold/auto, role isolation, PNG serving, and disconnect/reconnect over real sockets.
 
 For hardware acceptance: test both hands, punch building edges, grab/release with each grip, throw in different directions, leave/reenter VR, reconnect while holding a car, and finish/rematch with a real phone. See [TEST-RESULTS.md](TEST-RESULTS.md) for completed checks.
+
+## 3D hands and fire breath
+Hands now use articulated green mesh geometry with raised scales and claws. Grip (or desktop R) closes the fingers around a held car; releasing opens them. Breath (A/X or E) emits a capped, additive fire particle stream and warm local light using the server-confirmed attack origin and direction. Damage and cooldowns are unchanged. The hands follow controller rotation in VR; headset comfort, orientation, and frame rate still require hardware testing.
+

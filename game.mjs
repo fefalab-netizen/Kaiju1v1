@@ -73,7 +73,7 @@ export function command(g,role,c){
   const k=g.kaiju,fx=-Math.sin(k.yaw),fz=-Math.cos(k.yaw);
   if(c.type==='smash'){damage(g,k.x+fx*5,k.z+fz*5,7,45);g.cool.smash=.65;effect(g,'smash',k.x+fx*5,k.z+fz*5,7);}
   if(c.type==='stomp'){damage(g,k.x,k.z,12,65);g.cool.stomp=7;effect(g,'stomp',k.x,k.z,12);}
-  if(c.type==='breath'){for(const b of [...g.buildings,...g.units]){const dx=b.x-k.x,dz=b.z-k.z,d=Math.hypot(dx,dz);if(d<28&&d>0&&(dx*fx+dz*fz)/d>.86)hit(g,b,75);}g.cool.breath=12;effect(g,'breath',k.x+fx*14,k.z+fz*14,12);}
+  if(c.type==='breath'){for(const b of [...g.buildings,...g.units]){const dx=b.x-k.x,dz=b.z-k.z,d=Math.hypot(dx,dz);if(d<28&&d>0&&(dx*fx+dz*fz)/d>.86)hit(g,b,75);}g.cool.breath=12;effect(g,'breath',k.x+fx*14,k.z+fz*14,12,9,{originX:k.x,originZ:k.z,yaw:k.yaw});}
  }else if(role==='defender'){
   if(c.type==='order'){
    const u=g.units.find(u=>u.id===c.id&&u.hp>0);if(!u)return 'Unit no longer available';if(u.type!=='tank')return 'Turrets are stationary';
@@ -118,3 +118,4 @@ export function tick(g,dt){
  checkWin(g);
 }
 export function snapshot(g){const {input,inputAge,hands,punchCooldown,...s}=g;return s;}
+
