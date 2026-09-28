@@ -25,18 +25,18 @@ function impactSound(big){if(!sound||!audioContext||audioContext.state!=='runnin
 $('sound').onclick=()=>{unlockAudio();sound=!sound;$('sound').textContent=sound?'Sound on':'Sound off';};
 for(const b of document.querySelectorAll('[data-role]')){b.disabled=false;b.onclick=()=>join(b.dataset.role);}
 function join(r){
- if(ws&&ws.readyState<2)return;const request=shell.request();if(!request)return;role=r;shell.message('Connecting to city command…');for(const b of document.querySelectorAll('[data-role]'))b.disabled=true;ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host);$('connection').textContent='CONNECTING';
+ if(ws&&ws.readyState<2)return;const request=shell.request(r);if(!request)return;role=r;shell.message('Connecting to city command…');for(const b of document.querySelectorAll('[data-role]'))b.disabled=true;ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host);$('connection').textContent='CONNECTING';
  ws.onopen=()=>send({type:'join',...request,role});
  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.error){toast(m.error);shell.message(m.error);if(!$('lobby').hidden)ws.close();return;}
   if(m.joined){shell.joined(m.room);$('lobby').hidden=true;$('game').hidden=false;document.body.classList.add(role);$('connection').textContent=m.room+' / '+role.toUpperCase();setup();window.scrollTo(0,0);}
-  if(m.state){const reset=m.state.elapsed<lastElapsed;state=m.state;lastElapsed=state.elapsed;paused=m.paused;if(reset){seenEffects.clear();selectedUnit=null;clearTransient();}updateUI(m.players);consumeEffects();if(role==='defender')drawMap();}
+  if(m.state){const reset=m.state.elapsed<lastElapsed;state=m.state;lastElapsed=state.elapsed;paused=m.paused;if(reset){seenEffects.clear();selectedUnit=null;clearTransient();}shell.track(state,role);updateUI(m.players);consumeEffects();if(role==='defender')drawMap();}
  };
  ws.onclose=()=>{if(!$('lobby').hidden){$('connection').textContent='AWAITING DEPLOYMENT';for(const b of document.querySelectorAll('[data-role]'))b.disabled=false;}else{$('connection').textContent='DISCONNECTED — RELOAD TO REJOIN';toast('Connection lost. Reload and join the same room.');}};
  ws.onerror=()=>toast('Could not connect to game server');
 }
 $('start').onclick=()=>send({type:'start'});
 $('practice').onclick=()=>send({type:'start',practice:true});
-$('reset').onclick=()=>send({type:'reset'});
+$('reset').onclick=()=>send({type:'reset'});$('next-chapter').onclick=()=>send({type:'next'});
 function grabOrThrow(hand=1){const held=state?.cars.some(c=>c.status==='held'&&c.hand===hand);send({type:held?'throw':'grab',hand});}
 function attack(type,hand){unlockAudio();if(type==='block'){guard=!guard;return;}if(type==='grab'){grabOrThrow();return;}send({type,hand});}
 function selectTool(type){selected=type;if(type!=='select')selectedUnit=null;for(const b of $('controls').children)b.classList.toggle('active',b.dataset.type===type);updateOrders();commander?.selectionChanged(type);}
@@ -78,12 +78,16 @@ function updateUI(players){
  const lost=state.buildings.filter(b=>b.hp<=0).length;$('health').textContent=Math.ceil(state.kaiju.hp);$('damage').textContent=Math.round(lost/state.buildings.length*100)+'%';
  const seconds=Math.ceil(state.remaining);$('time').textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');$('credits').textContent=Math.floor(state.credits);
  $('status').textContent=state.phase==='ended'?state.winner.toUpperCase()+' WINS — '+state.reason:paused?'PAUSED — waiting for disconnected player':state.phase==='lobby'?'Ready to level the playing field?':(role==='kaiju'?'DESTROY THE CITY':'PROTECT THE CITY')+(state.slow>0?' · KAIJU FROZEN':'');
- $('joinInfo').textContent='Kaiju '+(players.kaiju?'●':'○')+' / Defender '+(players.defender?'●':state.bot?'AI':'○')+' · Room '+$('room').value.toUpperCase();
- $('start').hidden=state.phase!=='lobby';$('start').disabled=!players.kaiju||!players.defender;$('practice').hidden=state.phase!=='lobby'||role!=='kaiju';$('reset').hidden=state.phase!=='ended';
- $('strategy').textContent=state.buildings.filter(b=>b.facility).map(b=>b.name+' '+(b.hp<=0?'LOST':Math.ceil(b.hp)+'%')).join('  /  ')+' • Lose all three = kaiju victory • Power: turret fire • Hospital: repairs • Evac: countdown speed';
+ $('joinInfo').textContent='Kaiju '+(players.kaiju?'●':state.botRole==='kaiju'?'AI':'○')+' / Defender '+(players.defender?'●':state.botRole==='defender'?'AI':'○')+' · Room '+$('room').value.toUpperCase();
+ $('start').hidden=state.phase!=='lobby';$('start').disabled=state.botRole?false:!players.kaiju||!players.defender;$('start').textContent=state.mode==='campaign'?'Begin chapter':'Start match';$('practice').hidden=state.phase!=='lobby'||state.mode!=='quick'||!!(players.kaiju&&players.defender);$('reset').hidden=state.phase!=='ended';$('reset').textContent=state.mode==='campaign'?'Replay chapter':'New round';
+ $('invite').hidden=!!state.botRole;
+ $('city-target').textContent='CITY LOST / '+Math.round(state.rules.target/48*100)+'%';
+ $('mission-panel').hidden=state.mode!=='campaign';$('next-chapter').hidden=state.mode!=='campaign'||state.phase!=='ended'||state.winner!==role||state.chapter>=4;
+ if(state.mode==='campaign'){$('mission-title').textContent=state.rules.name+(state.phase==='ended'?(state.winner===role?(state.chapter===4?' · CAMPAIGN COMPLETE':' · CHAPTER COMPLETE'):' · TRY AGAIN'):'');$('mission-story').textContent=state.rules.story;$('mission-objective').textContent=state.rules.brief+' Kaiju HP: '+state.rules.hp+' · Attack strength: '+Math.round(state.rules.power*100)+'% · Unit strength: '+Math.round(state.rules.unit*100)+'% · Credits: '+state.rules.credits+' + '+state.rules.income+'/s.';}
+ $('strategy').textContent=state.buildings.filter(b=>b.facility).map(b=>b.name+' '+(b.hp<=0?'LOST':Math.ceil(b.hp)+'%')).join('  /  ')+(state.rules.facilitiesWin?' • Lose all three = kaiju victory':' • Destroy '+state.rules.target+' blocks to win as kaiju')+' • Power: turret fire • Hospital: repairs • Evac: countdown speed';
  $('combat').textContent=role==='kaiju'?'STAMINA '+Math.ceil(state.kaiju.stamina)+'/100'+(state.kaiju.blocking?' • BLOCKING FRONT':' • Guard '+(guard?'requested':'down')):'Destroy the kaiju or finish evacuation. Protect the three facilities.';
  $('intel-count').textContent=(48-lost)+'/48 BLOCKS · '+state.units.length+'/20 UNITS';
- for(const b of $('controls').children){const type=b.dataset.type,cd=state.cool[type]||0;b.textContent=b.dataset.label+(cd>0?' ('+cd.toFixed(1)+'s)':'');if(type==='block')b.textContent=guard?'Lower guard · B':'Block · B';if(type==='grab')b.textContent=state.cars.some(c=>c.status==='held'&&c.hand===1)?'Throw car · R':'Grab car · R';const cost={smash:8,stomp:30,breath:40}[type]||0;b.disabled=state.phase!=='playing'||paused||cd>0||(role==='kaiju'&&cost>0&&(state.kaiju.stamina<cost||state.kaiju.blocking));}
+ for(const b of $('controls').children){const type=b.dataset.type,cd=state.cool[type]||0,locked=role==='kaiju'?['smash','stomp','breath'].includes(type)&&!state.rules.attacks.includes(type):type!=='select'&&!state.rules.tools.includes(type);b.textContent=b.dataset.label+(cd>0?' ('+cd.toFixed(1)+'s)':'');if(type==='block')b.textContent=guard?'Lower guard · B':'Block · B';if(type==='grab')b.textContent=state.cars.some(c=>c.status==='held'&&c.hand===1)?'Throw car · R':'Grab car · R';if(locked)b.textContent+=' · LOCKED';const cost={smash:8,stomp:30,breath:40}[type]||0;b.disabled=locked||state.phase!=='playing'||paused||cd>0||(role==='kaiju'&&cost>0&&(state.kaiju.stamina<cost||state.kaiju.blocking));}
  if(role==='kaiju'){$('interaction').textContent=state.cars.some(c=>c.status==='held')?'CAR HELD · Swing and release grip / R to throw':state.cars.some(c=>c.status==='parked'&&Math.hypot(c.x-state.kaiju.x,c.z-state.kaiju.z)<10)?'CAR IN REACH · Hold grip / R to grab':'';}
  updateOrders();
 }
@@ -97,6 +101,7 @@ function consumeEffects(){
    if(e.type==='hurt')pulseHands(.18,45);
   }
   if(e.type==='hurt'||e.type==='blocked'){damageCue={...e,until:performance.now()+800};$('feedback').textContent=(e.type==='blocked'?'BLOCKED ':'HIT -')+Math.ceil(e.amount);$('feedback').style.color=e.type==='blocked'?'#83e8ff':'#ff9577';}
+  if(e.type==='warning'&&role==='defender'){$('dispatch').textContent='KAIJU WINDING UP '+e.attack.toUpperCase()+' — MOVE YOUR UNITS';}
   if(e.type==='facilityLost'){toast(e.name+' LOST');$('dispatch').textContent=e.name+' OFFLINE — DEFENSE WEAKENED';}
   if(['shot','blocked','hurt','breath'].includes(e.type))combatSound(e.type);
   if(['impact','punch','collapse','unitDestroyed'].includes(e.type)){hitCue=e.type==='unitDestroyed'?'UNIT DESTROYED':'HIT CONFIRMED';hitCueUntil=performance.now()+450;}
@@ -127,13 +132,12 @@ function drawMap(){
  if(chosen){ctx.strokeStyle='#73e8eb55';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(chosen.x,chosen.z,chosen.type==='crew'?6:chosen.type==='tank'?18:25,0,Math.PI*2);ctx.stroke();if(chosen.order){ctx.setLineDash([.8,.7]);ctx.strokeStyle='#80eee0';ctx.beginPath();ctx.moveTo(chosen.x,chosen.z);ctx.lineTo(chosen.order.x,chosen.order.z);ctx.stroke();ctx.setLineDash([]);ctx.strokeRect(chosen.order.x-1,chosen.order.z-1,2,2);}}
  for(const u of state.units){if(u.id===selectedUnit){ctx.strokeStyle='#ffe3a0';ctx.lineWidth=.3;ctx.strokeRect(u.x-2.5,u.z-2.5,5,5);}ctx.save();ctx.translate(u.x,u.z);const target=u.order||state.kaiju;ctx.rotate(Math.atan2(target.x-u.x,-(target.z-u.z)));ctx.drawImage(sprites[u.type==='crew'?'tank':u.type],-2.3,-2.3,4.6,4.6);if(u.type==='crew'){ctx.fillStyle='#80ffba';ctx.font='bold 3px monospace';ctx.fillText('+',-1,1);}ctx.restore();}
  for(const b of state.buildings.filter(b=>b.facility)){ctx.strokeStyle=b.hp>0?'#ffd079':'#ff654e';ctx.lineWidth=.45;ctx.strokeRect(b.x-3,b.z-3,6,6);ctx.fillStyle=ctx.strokeStyle;ctx.font='bold 1.6px monospace';ctx.textAlign='center';ctx.fillText(b.name,b.x,b.z-3.7);ctx.textAlign='start';}
- for(const e of state.effects){if(e.type==='shot'){ctx.strokeStyle='#ffdb80';ctx.lineWidth=.3;ctx.beginPath();ctx.moveTo(e.x,e.z);ctx.lineTo(e.targetX,e.targetZ);ctx.stroke();continue;}ctx.strokeStyle=e.type==='repair'?'#70ffc0':e.type==='freeze'?'#87d9ff':'#ffb261';ctx.lineWidth=.4;ctx.beginPath();ctx.arc(e.x,e.z,Math.max(.1,e.r*(1-e.ttl/(e.type==='collapse'?1.6:.9))),0,7);ctx.stroke();}
+ for(const e of state.effects){if(e.type==='shot'){ctx.strokeStyle='#ffdb80';ctx.lineWidth=.3;ctx.beginPath();ctx.moveTo(e.x,e.z);ctx.lineTo(e.targetX,e.targetZ);ctx.stroke();continue;}ctx.strokeStyle=e.type==='warning'?'#ff5050':e.type==='repair'?'#70ffc0':e.type==='freeze'?'#87d9ff':'#ffb261';ctx.lineWidth=.4;ctx.beginPath();ctx.arc(e.x,e.z,e.type==='warning'?e.r:Math.max(.1,e.r*(1-e.ttl/(e.type==='collapse'?1.6:.9))),0,7);ctx.stroke();}
  const k=state.kaiju;ctx.save();ctx.translate(k.x,k.z);ctx.rotate(-k.yaw);ctx.fillStyle='#ff794422';ctx.beginPath();ctx.arc(0,0,4.3,0,7);ctx.fill();ctx.drawImage(sprites.monster,-4,-4,8,8);ctx.restore();
  commander?.paint(ctx);ctx.strokeStyle='#77979b';ctx.lineWidth=.3;ctx.strokeRect(-37,-37,74,74);
 }
 function texture(image){const canvas=document.createElement('canvas');canvas.width=Math.min(512,image.width);canvas.height=Math.min(512,image.height);canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);const t=new THREE.CanvasTexture(canvas);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearMipmapLinearFilter;t.colorSpace=THREE.SRGBColorSpace;return t;}
-const spriteTextures=Object.fromEntries(Object.entries(sprites).map(([name,c])=>[name,texture(c)]));
-const buildingMaterials=Array.from({length:3},(_,v)=>Array.from({length:3},(_,damage)=>new THREE.MeshStandardMaterial({map:texture(facade(v,damage)),roughness:.95})));
+let spriteTextures,buildingMaterials;
 function box(w,h,d,color){const mesh=new THREE.Mesh(sharedBox,new THREE.MeshStandardMaterial({color,roughness:.85}));mesh.scale.set(w,h,d);return mesh;}
 function sprite(name,size){const mesh=new THREE.Sprite(new THREE.SpriteMaterial({map:spriteTextures[name],transparent:true,alphaTest:.1}));mesh.scale.set(size,size,1);return mesh;}
 function disposeGroup(group){group.traverse(m=>{if(m.material){if(Array.isArray(m.material))m.material.forEach(x=>x.dispose());else m.material.dispose();}if(m.geometry&&m.geometry!==sharedBox)m.geometry.dispose();});}
@@ -142,6 +146,8 @@ function spawnParticles(e,count){
  for(let i=0;i<count&&particles.length<240;i++){const angle=Math.random()*Math.PI*2,speed=2+Math.random()*7;particles.push({x:e.x,y:Math.max(1,e.y||1),z:e.z,vx:Math.cos(angle)*speed,vy:2+Math.random()*7,vz:Math.sin(angle)*speed,life:.5+Math.random()});}
 }
 function setup3D(){
+ spriteTextures=Object.fromEntries(Object.entries(sprites).map(([name,c])=>[name,texture(c)]));
+ buildingMaterials=Array.from({length:3},(_,v)=>Array.from({length:3},(_,damage)=>new THREE.MeshStandardMaterial({map:texture(facade(v,damage)),roughness:.95})));
  scene=new THREE.Scene();scene.background=new THREE.Color('#142332');scene.fog=new THREE.Fog('#142332',55,130);camera=new THREE.PerspectiveCamera(75,1,.1,180);rig=new THREE.Group();rig.add(camera);scene.add(rig);
  renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.xr.enabled=true;$('view').prepend(renderer.domElement);
  scene.add(new THREE.HemisphereLight(0xc5eaff,0x31352b,2));const light=new THREE.DirectionalLight(0xffd0a0,2);light.position.set(-25,60,20);scene.add(light);
@@ -151,7 +157,7 @@ function setup3D(){
   const controller=renderer.xr.getController(i);controllers.push(controller);rig.add(controller);
   controller.addEventListener('connected',e=>{controller.userData.source=e.data;handVisuals[i].children[0].scale.x=e.data.handedness==='left'?-1:1;});
   controller.addEventListener('disconnected',()=>{controller.userData.source=null;send({type:'drop'});});
-  controller.addEventListener('selectstart',()=>attack('smash',i));
+  controller.addEventListener('selectstart',()=>{if(!state)return;if(state.phase==='lobby'){send({type:'start',practice:state.mode==='quick'});return;}if(state.phase==='ended'){send({type:state.mode==='campaign'&&state.winner===role&&state.chapter<4?'next':'reset'});return;}attack('smash',i);});
   controller.addEventListener('squeezestart',()=>{unlockAudio();send({type:'grab',hand:i});});
   controller.addEventListener('squeezeend',()=>{send({type:'throw',hand:i});});
   const grip=renderer.xr.getControllerGrip(i);grips.push(grip);rig.add(grip);
@@ -206,7 +212,7 @@ function setup3D(){
   attackAnim=Math.max(0,attackAnim-dt);for(let i=0;i<2;i++)desktopHands[i].position.z=-1.25-(i===smashHand?smash*.35:0);
   shake=Math.max(0,shake-dt);if(!session){camera.position.set(shake?Math.sin(now*.07)*shake*.12:0,0,0);camera.rotation.set(pitch,0,0);}
   hud.visible=!!session;
-  if(session&&now-hudTime>150){hudTime=now;const ctx=hudCanvas.getContext('2d');ctx.clearRect(0,0,1024,320);ctx.fillStyle='#0b1119dd';ctx.fillRect(0,0,1024,320);ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.fillText($('status').textContent.slice(0,48),25,48);ctx.font='30px sans-serif';ctx.fillText('HP '+Math.ceil(state.kaiju.hp)+'   City '+$('damage').textContent+' / 60%   '+$('time').textContent,25,102);ctx.fillText('Smash '+state.cool.smash.toFixed(1)+'s   Stomp '+state.cool.stomp.toFixed(1)+'s   Breath '+state.cool.breath.toFixed(1)+'s',25,156);ctx.font='24px sans-serif';ctx.fillText('Stamina '+Math.ceil(state.kaiju.stamina)+' | '+(state.kaiju.blocking?'BLOCKING':'Guard down')+' | Stick click: guard | Turn: snap/smooth',25,210);ctx.fillStyle='#ffbb79';if(now<hitCueUntil){ctx.fillStyle='#b4ffd1';ctx.fillText(hitCue,25,305);}ctx.fillText(state.buildings.filter(b=>b.facility).map(b=>b.name+':'+(b.hp>0?Math.ceil(b.hp):'LOST')).join('  '),25,266);if(damageCue&&now<damageCue.until){const raw=damageAngle(damageCue);const angle=Math.atan2(Math.sin(raw),Math.cos(raw));ctx.fillStyle=damageCue.type==='blocked'?'#8deaff':'#ff654e';ctx.font='bold 25px sans-serif';ctx.fillText((Math.abs(angle)<.8?'FRONT':Math.abs(angle)>2.3?'REAR':angle>0?'RIGHT':'LEFT')+' '+(damageCue.type==='blocked'?'BLOCK':'HIT'),740,305);}hudTexture.needsUpdate=true;}
+  if(session&&now-hudTime>150){hudTime=now;const ctx=hudCanvas.getContext('2d');ctx.clearRect(0,0,1024,320);ctx.fillStyle='#0b1119dd';ctx.fillRect(0,0,1024,320);ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.fillText($('status').textContent.slice(0,48),25,48);ctx.font='30px sans-serif';ctx.fillText('HP '+Math.ceil(state.kaiju.hp)+'   City '+$('damage').textContent+' / '+Math.round(state.rules.target/48*100)+'%   '+$('time').textContent,25,102);ctx.fillText(state.phase==='lobby'?'TRIGGER: BEGIN '+(state.mode==='campaign'?state.rules.name:'MATCH'):state.phase==='ended'?'TRIGGER: '+(state.mode==='campaign'&&state.winner===role&&state.chapter<4?'NEXT CHAPTER':'REPLAY'):'Smash '+state.cool.smash.toFixed(1)+'s   Stomp '+(state.rules.attacks.includes('stomp')?state.cool.stomp.toFixed(1)+'s':'LOCKED')+'   Breath '+(state.rules.attacks.includes('breath')?state.cool.breath.toFixed(1)+'s':'LOCKED'),25,156);ctx.font='24px sans-serif';ctx.fillText('Stamina '+Math.ceil(state.kaiju.stamina)+' | '+(state.kaiju.blocking?'BLOCKING':'Guard down')+' | Stick click: guard | Turn: snap/smooth',25,210);ctx.fillStyle='#ffbb79';if(now<hitCueUntil){ctx.fillStyle='#b4ffd1';ctx.fillText(hitCue,25,305);}ctx.fillText(state.buildings.filter(b=>b.facility).map(b=>b.name+':'+(b.hp>0?Math.ceil(b.hp):'LOST')).join('  '),25,266);if(damageCue&&now<damageCue.until){const raw=damageAngle(damageCue);const angle=Math.atan2(Math.sin(raw),Math.cos(raw));ctx.fillStyle=damageCue.type==='blocked'?'#8deaff':'#ff654e';ctx.font='bold 25px sans-serif';ctx.fillText((Math.abs(angle)<.8?'FRONT':Math.abs(angle)>2.3?'REAR':angle>0?'RIGHT':'LEFT')+' '+(damageCue.type==='blocked'?'BLOCK':'HIT'),740,305);}hudTexture.needsUpdate=true;}
   if(damageCue&&now<damageCue.until){const a=damageAngle(damageCue);const angle=Math.atan2(Math.sin(a),Math.cos(a));$('feedback').textContent=(damageCue.type==='blocked'?'BLOCKED':'HIT')+' FROM '+(Math.abs(angle)<.8?'FRONT':Math.abs(angle)>2.3?'REAR':angle>0?'RIGHT':'LEFT');}else $('feedback').textContent=now<hitCueUntil?hitCue:'';
   renderCity(dt,now);renderUnits();renderCars(dt);renderEffects();
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue;}p.vy-=12*dt;p.x+=p.vx*dt;p.y=Math.max(.1,p.y+p.vy*dt);p.z+=p.vz*dt;}

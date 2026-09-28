@@ -146,3 +146,24 @@ The responsive commander interface has facility health cards (tap to center map)
 QR encoding is bundled from https://github.com/kazuhikoarase/qrcode-generator (MIT; QR-LICENSE.txt). No external QR service receives room links. Cinematic poster art is labeled as promotional art. Intro video integration is pending the user's video file; no autoplay placeholder or video download is included.
 
 No tests, browser checks or headset checks were run for this interface update, as requested.
+
+## Campaign and solo play
+Choose Quick Match (existing two-player rules), Solo Quick Match (either role versus AI), or Campaign on the main page, then choose your side. Solo still uses the game server but needs no second browser, player or headset. Solo defenders use the 2D map only: no WebGL renderer, VR session or kaiju body is created. The kaiju AI runs in the server simulation, pursues buildings and telegraphs attacks before resolving them.
+
+Campaign is a five-mission progression on the existing city, with briefings, unlocks, victory gates, retries and a finale. Each mission resets the battlefield. Win to enable Next chapter. Chapter unlocks are stored separately for kaiju and commander in localStorage on this browser; they do not sync across devices, are not account-backed, and do not save an in-progress battle. A running solo session pauses when its human disconnects and can be rejoined through its room URL until the server discards the inactive room. Server restarts reset active sessions.
+
+| Chapter | Kaiju HP / damage | Unit HP / damage | Starting credits / income | Kaiju objective | Unlocks |
+|---|---|---|---|---|---|
+| First Contact | 350 / 35% | 45% | 35 / 2 per second | 6 blocks | Smash, basic tanks |
+| Growing Threat | 500 / 50% | 60% | 50 / 3.5 per second | 12 blocks | Stomp, crews, repairs |
+| Hold the Line | 700 / 70% | 75% | 65 / 5 per second | 20 blocks | Turrets |
+| Firestorm | 850 / 85% | 90% | 80 / 6 per second | 24 blocks | Breath, freeze |
+| City at War | 1000 / 100% | 100% | 100 / 7 per second | 29 blocks or all facilities | Missiles, full Quick Match rules |
+
+Defenders win each chapter by defeating the monster or completing evacuation. Early chapters last 120, 140 and 160 seconds of evacuation work; chapters 4–5 use 180. Losing EVAC still halves countdown speed. Other facility penalties remain throughout, but destroying all three is an alternate win only in the finale and Quick Match. Car throws and physical punches also use the chapter's damage multiplier.
+
+VR: press a trigger from the lobby to begin, or from results to advance after a campaign victory (replay otherwise). This avoids taking off the headset between chapters.
+
+Defender orders now open a centered, keyboard-accessible confirmation dialog. Confirm commits the marked position; Cancel or Escape dismisses it. The match keeps running; the dialog closes if play ends or pauses.
+
+No automated tests, browser tests or headset tests were run for this update, per user preference. Campaign balance and AI behavior require playtesting.
