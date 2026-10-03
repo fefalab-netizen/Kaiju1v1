@@ -285,6 +285,25 @@ function renderHitFeedback(now,inVR){
 
 // Original heavy rescue-warrior silhouette; separate parts allow future skins.
 function buildRobot(group){
+ buildRobotFallback(group);
+ // Load on deployment, never block the lobby or the phone's map-only view.
+ import('three/addons/loaders/GLTFLoader.js').then(({GLTFLoader})=>{
+  new GLTFLoader().load('./assets/eva.glb',gltf=>{
+   const model=gltf.scene;
+   if(!group.parent){disposeGroup(model);return;}
+   model.updateMatrixWorld(true);
+   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+   if(!Number.isFinite(size.y)||size.y<=0){disposeGroup(model);return;}
+   const scale=10/size.y;
+   // Parent wrapper preserves any authored root transforms.
+   const fitted=new THREE.Group();fitted.add(model);fitted.scale.setScalar(scale);
+   fitted.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+   for(const child of [...group.children]){group.remove(child);disposeGroup(child);}
+   group.add(fitted);
+  },undefined,()=>console.warn('Robot model unavailable; using placeholder.'));
+ }).catch(()=>console.warn('Robot loader unavailable; using placeholder.'));
+}
+function buildRobotFallback(group){
  const part=(w,h,d,color,x,y,z,gait=0)=>{const m=box(w,h,d,color);m.position.set(x,y,z);m.userData.gait=gait;group.add(m);};
  part(4,3,2.4,0x455e6d,0,6,0);part(3.3,.65,.3,0xe7ab42,0,6.5,1.35);
  part(2,1.4,1.8,0xb8cbc9,0,8.2,0);part(1.5,.3,.15,0x68ffff,0,8.4,1);
