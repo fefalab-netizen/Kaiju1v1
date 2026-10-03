@@ -44,7 +44,7 @@ function setup(){
  $('controls').replaceChildren();
  const items=role==='kaiju'?[['smash','Smash · click · 8 STA'],['grab','Grab car · R'],['stomp','Stomp · Q · 30 STA'],['breath','Breath · E · 40 STA'],['block','Block · B']]:[['select','Select / Move'],['tank','Tank · 35'],['turret','Turret · 50'],['crew','Repair crew · 40'],['repair','Repair · 30'],['missile','Missile · 60'],['freeze','Freeze · 40']];
  for(const [type,label]of items){const b=document.createElement('button');b.dataset.type=type;b.dataset.label=label;b.textContent=label;b.onclick=()=>role==='kaiju'?attack(type):selectTool(type);$('controls').append(b);if(type===selected)b.classList.add('active');}
- $('hint').textContent=role==='kaiju'?'WASD move · drag look · click punch · R grab/throw nearby car · Q stomp · E breath. VR: swing fists; grip to grab, release to throw; trigger smash; B/Y stomp; A/X breath; click right stick to toggle block. Desktop B toggles block. Block protects the front, drains stamina, and prevents attacks.':'Choose a deployment, then tap the map. Select / Move: tap a tank, then its destination. Tanks pursue and fire while moving; turrets hold ground; crews automatically seek damaged buildings. Hold stops movement; Auto resumes the unit’s job.';
+ $('hint').textContent=role==='kaiju'?'WASD move · drag look · click punch · R grab/throw nearby car · Q stomp · E breath. VR: swing fists; grip to grab, release to throw; trigger smash; B/Y stomp; A/X breath; click right stick to toggle block. Desktop B toggles block. Block protects the front, drains stamina, and prevents attacks.':'Three cards: select one, then tap the map to play instantly. Keys 1–3 select cards. Replacements draw every 5s; discard unwanted cards. Move units: tap a tank, then its destination. Tanks pursue and fire while moving; turrets hold ground; crews automatically seek damaged buildings. Hold stops movement; Auto resumes the unit’s job.';
  $('command-panel').hidden=role!=='defender';$('intel').hidden=role!=='defender';
  $('hold').onclick=()=>send({type:'order',id:selectedUnit,mode:'hold'});
  $('auto').onclick=()=>send({type:'order',id:selectedUnit,mode:'auto'});
@@ -129,8 +129,8 @@ function drawMap(){
  }
  for(const car of state.cars){if(car.status==='held')continue;ctx.fillStyle=car.status==='wreck'?'#54504c':car.status==='flying'?'#ffc064':'#8b9fa9';ctx.fillRect(car.x-.45,car.z-.9,.9,1.8);}
  const chosen=state.units.find(u=>u.id===selectedUnit);
- if(chosen){ctx.strokeStyle='#73e8eb55';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(chosen.x,chosen.z,chosen.type==='crew'?6:chosen.type==='tank'?18:25,0,Math.PI*2);ctx.stroke();if(chosen.order){ctx.setLineDash([.8,.7]);ctx.strokeStyle='#80eee0';ctx.beginPath();ctx.moveTo(chosen.x,chosen.z);ctx.lineTo(chosen.order.x,chosen.order.z);ctx.stroke();ctx.setLineDash([]);ctx.strokeRect(chosen.order.x-1,chosen.order.z-1,2,2);}}
- for(const u of state.units){if(u.id===selectedUnit){ctx.strokeStyle='#ffe3a0';ctx.lineWidth=.3;ctx.strokeRect(u.x-2.5,u.z-2.5,5,5);}ctx.save();ctx.translate(u.x,u.z);const target=u.order||state.kaiju;ctx.rotate(Math.atan2(target.x-u.x,-(target.z-u.z)));ctx.drawImage(sprites[u.type==='crew'?'tank':u.type],-2.3,-2.3,4.6,4.6);if(u.type==='crew'){ctx.fillStyle='#80ffba';ctx.font='bold 3px monospace';ctx.fillText('+',-1,1);}ctx.restore();}
+ if(chosen){ctx.strokeStyle='#73e8eb55';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(chosen.x,chosen.z,chosen.type==='robot'?11:chosen.type==='crew'?6:chosen.type==='tank'?18:25,0,Math.PI*2);ctx.stroke();if(chosen.order){ctx.setLineDash([.8,.7]);ctx.strokeStyle='#80eee0';ctx.beginPath();ctx.moveTo(chosen.x,chosen.z);ctx.lineTo(chosen.order.x,chosen.order.z);ctx.stroke();ctx.setLineDash([]);ctx.strokeRect(chosen.order.x-1,chosen.order.z-1,2,2);}}
+ for(const u of state.units){if(u.id===selectedUnit){ctx.strokeStyle='#ffe3a0';ctx.lineWidth=.3;ctx.strokeRect(u.x-2.5,u.z-2.5,5,5);}ctx.save();ctx.translate(u.x,u.z);const target=u.order||state.kaiju;ctx.rotate(Math.atan2(target.x-u.x,-(target.z-u.z)));if(u.type==='robot'){ctx.fillStyle='#243544';ctx.fillRect(-2.6,-1.8,5.2,3.6);ctx.fillStyle='#d6e0df';ctx.fillRect(-1.5,-2,3,3);ctx.fillStyle='#eead42';ctx.fillRect(-1.1,-1.8,2.2,.6);ctx.fillStyle='#526879';ctx.fillRect(-3,-1,1.2,3);ctx.fillRect(1.8,-1,1.2,3);ctx.fillRect(-1.8,1,1.4,2);ctx.fillRect(.4,1,1.4,2);}else ctx.drawImage(sprites[u.type==='crew'?'tank':u.type],-2.3,-2.3,4.6,4.6);if(u.type==='crew'){ctx.fillStyle='#80ffba';ctx.font='bold 3px monospace';ctx.fillText('+',-1,1);}ctx.restore();}
  for(const b of state.buildings.filter(b=>b.facility)){ctx.strokeStyle=b.hp>0?'#ffd079':'#ff654e';ctx.lineWidth=.45;ctx.strokeRect(b.x-3,b.z-3,6,6);ctx.fillStyle=ctx.strokeStyle;ctx.font='bold 1.6px monospace';ctx.textAlign='center';ctx.fillText(b.name,b.x,b.z-3.7);ctx.textAlign='start';}
  for(const e of state.effects){if(e.type==='shot'){ctx.strokeStyle='#ffdb80';ctx.lineWidth=.3;ctx.beginPath();ctx.moveTo(e.x,e.z);ctx.lineTo(e.targetX,e.targetZ);ctx.stroke();continue;}ctx.strokeStyle=e.type==='warning'?'#ff5050':e.type==='repair'?'#70ffc0':e.type==='freeze'?'#87d9ff':'#ffb261';ctx.lineWidth=.4;ctx.beginPath();ctx.arc(e.x,e.z,e.type==='warning'?e.r:Math.max(.1,e.r*(1-e.ttl/(e.type==='collapse'?1.6:.9))),0,7);ctx.stroke();}
  const k=state.kaiju;ctx.save();ctx.translate(k.x,k.z);ctx.rotate(-k.yaw);ctx.fillStyle='#ff794422';ctx.beginPath();ctx.arc(0,0,4.3,0,7);ctx.fill();ctx.drawImage(sprites.monster,-4,-4,8,8);ctx.restore();
@@ -237,7 +237,7 @@ function renderCity(dt,now){
  }
 }
 function renderUnits(){
- for(const u of state.units){let mesh=unitObjects.get(u.id);if(!mesh){mesh=new THREE.Group();const base=box(2,u.type==='tank'?.7:1,2,0x365872);base.position.y=.5;mesh.add(base);const art=sprite(u.type==='crew'?'tank':u.type,u.type==='turret'?3:2.6);art.position.y=1.6;mesh.add(art);if(u.type==='crew'){base.material.color.setHex(0x68c698);const cross=box(.4,.15,1.4,0xffffff);cross.position.y=1.1;mesh.add(cross);}scene.add(mesh);unitObjects.set(u.id,mesh);}mesh.position.set(u.x,0,u.z);}
+ for(const u of state.units){let mesh=unitObjects.get(u.id);if(!mesh){mesh=new THREE.Group();if(u.type==='robot'){buildRobot(mesh);}else{const base=box(2,u.type==='tank'?.7:1,2,0x365872);base.position.y=.5;mesh.add(base);const art=sprite(u.type==='crew'?'tank':u.type,u.type==='turret'?3:2.6);art.position.y=1.6;mesh.add(art);if(u.type==='crew'){base.material.color.setHex(0x68c698);const cross=box(.4,.15,1.4,0xffffff);cross.position.y=1.1;mesh.add(cross);}}scene.add(mesh);unitObjects.set(u.id,mesh);}mesh.position.set(u.x,0,u.z);if(u.type==='robot'){mesh.rotation.y=Math.atan2(state.kaiju.x-u.x,state.kaiju.z-u.z);for(const limb of mesh.children){if(limb.userData.gait)limb.rotation.x=Math.sin(state.elapsed*4+limb.userData.gait)*.12;}}}
  for(const [id,mesh]of unitObjects)if(!state.units.some(u=>u.id===id)){scene.remove(mesh);disposeGroup(mesh);unitObjects.delete(id);}
 }
 function renderCars(dt){
@@ -281,4 +281,13 @@ function renderHitFeedback(now,inVR){
  if(hit){ctx.globalAlpha=Math.min(1,(hitCueUntil-now)/180);ctx.strokeStyle='#c5ffd6';ctx.lineWidth=5;for(const [x,y]of [[-1,-1],[1,-1],[-1,1],[1,1]]){ctx.beginPath();ctx.moveTo(128+x*9,128+y*9);ctx.lineTo(128+x*20,128+y*20);ctx.stroke();}ctx.globalAlpha=1;}
  if(damage){const angle=damageAngle(damageCue)-Math.PI/2;ctx.globalAlpha=Math.min(.85,(damageCue.until-now)/350);ctx.strokeStyle=damageCue.type==='blocked'?'#79e6ff':'#ff735d';ctx.lineWidth=9;ctx.beginPath();ctx.arc(128,128,91,angle-.38,angle+.38);ctx.stroke();ctx.globalAlpha=1;}
  feedbackTexture.needsUpdate=true;
+}
+
+// Original heavy rescue-warrior silhouette; separate parts allow future skins.
+function buildRobot(group){
+ const part=(w,h,d,color,x,y,z,gait=0)=>{const m=box(w,h,d,color);m.position.set(x,y,z);m.userData.gait=gait;group.add(m);};
+ part(4,3,2.4,0x455e6d,0,6,0);part(3.3,.65,.3,0xe7ab42,0,6.5,1.35);
+ part(2,1.4,1.8,0xb8cbc9,0,8.2,0);part(1.5,.3,.15,0x68ffff,0,8.4,1);
+ part(2.5,1,2,0x22313f,0,3.9,0);part(.5,1,.5,0xd49b3b,-.8,9.2,0);part(.5,1,.5,0xd49b3b,.8,9.2,0);
+ for(const side of [-1,1]){part(2,1.6,2.4,0xb8cbc9,side*3,7,0);part(1.3,2.6,1.5,0x263b50,side*3,4.8,0,side);part(1.7,1.4,1.8,0x667d89,side*3,3.3,.3);part(1.4,2.8,1.6,0x526978,side*.95,2.3,0,-side);part(1.8,1,2.6,0x22313f,side*.95,.5,.4);}
 }

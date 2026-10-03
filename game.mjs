@@ -1,5 +1,5 @@
 import {configureGame} from './campaign.mjs';
-export const COST={crew:40,tank:35,turret:50,repair:30,missile:60,freeze:40};
+export const COST={robot:150,crew:40,tank:35,turret:50,repair:30,missile:60,freeze:40};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const finitePoint=p=>p&&[p.x,p.y,p.z].every(Number.isFinite);
@@ -90,21 +90,26 @@ export function command(g,role,c){
    if(c.mode!=='move'||![c.x,c.z].every(Number.isFinite))return 'Invalid destination';
    u.order={x:clamp(c.x,-34,34),z:clamp(c.z,-34,34)};return;
   }
+  if(c.type==='discard'){if(!Number.isInteger(c.slot)||!g.hand[c.slot])return 'Choose a card to discard';cycleCard(g,c.slot);return;}
   if(!Object.hasOwn(COST,c.type)||!Number.isFinite(c.x)||!Number.isFinite(c.z))return 'Invalid order';
   if(!g.rules.tools.includes(c.type))return 'This unit or ability unlocks in a later chapter';
+  const slot=g.hand.indexOf(c.type);if(slot<0)return 'That card is not in your hand';
+  if(c.type==='robot'&&(g.robotUsed||g.elapsed<45))return g.robotUsed?'Bastion has already deployed this match':'Bastion arrives after 45 seconds';
   if(g.credits<COST[c.type])return 'Not enough credits';if((g.cool[c.type]||0)>0)return 'Ability cooling down';
   const x=clamp(c.x,-34,34),z=clamp(c.z,-34,34);
   if(c.type==='repair'){const b=g.buildings.filter(b=>b.hp>0&&b.hp<100&&distance(b,{x,z})<7).sort((a,b)=>distance(a,{x,z})-distance(b,{x,z}))[0];if(!b)return 'Tap a damaged standing building';b.hp=Math.min(100,b.hp+(facilityOnline(g,'hospital')?45:22));effect(g,'repair',b.x,b.z,5);}
   if(['tank','turret','crew'].includes(c.type)){if(g.units.length>=20)return 'Unit limit reached (20)';g.units.push({id:g.nextId++,type:c.type,x,z,hp:(c.type==='tank'?90:c.type==='crew'?65:140)*g.rules.unit,maxHp:(c.type==='tank'?90:c.type==='crew'?65:140)*g.rules.unit,fire:0,order:null});}
   if(c.type==='missile'){if(distance(g.kaiju,{x,z})<9)hurtKaiju(g,130,{x,z});g.cool.missile=10;effect(g,'missile',x,z,9);}
   if(c.type==='freeze'){if(distance(g.kaiju,{x,z})<10)g.slow=5;g.cool.freeze=14;effect(g,'freeze',x,z,10);}
-  g.credits-=COST[c.type];
+  if(c.type==='robot'){if(g.units.length>=20)return 'Unit limit reached (20)';g.robotUsed=true;g.units.push({id:g.nextId++,type:'robot',x,z,h:10,hp:450*g.rules.unit,maxHp:450*g.rules.unit,fire:0,order:null});effect(g,'stomp',x,z,5);}
+  g.credits-=COST[c.type];cycleCard(g,slot);
  }else return 'Not a player';
  checkWin(g);
 }
 export function checkWin(g){const destroyed=g.buildings.filter(b=>b.hp<=0).length;if(g.rules.facilitiesWin&&g.buildings.filter(b=>b.facility).every(b=>b.hp<=0)){g.winner='kaiju';g.reason='All three critical facilities destroyed';}else if(destroyed>=g.rules.target){g.winner='kaiju';g.reason=g.rules.target+' city blocks destroyed';}else if(g.kaiju.hp<=0||g.remaining<=0){g.winner='defender';g.reason=g.kaiju.hp<=0?'Kaiju defeated':'Evacuation completed';}if(g.winner)g.phase='ended';}
 export function tick(g,dt){
  if(g.phase!=='playing')return;g.elapsed+=dt;g.remaining=Math.max(0,g.remaining-dt*(facilityOnline(g,'evac')?1:.5));g.credits=Math.min(200,g.credits+g.rules.income*dt);g.slow=Math.max(0,g.slow-dt);for(const key in g.cool)g.cool[key]=Math.max(0,g.cool[key]-dt);g.punchCooldown=g.punchCooldown.map(v=>Math.max(0,v-dt));
+ if(g.drawQueue.length){g.drawQueue[0].wait-=dt;if(g.drawQueue[0].wait<=0){const draw=g.drawQueue.shift();g.hand[draw.slot]=g.deck.shift();}}
  runAI(g,dt);if(g.phase!=='playing')return;
  g.inputAge+=dt;const k=g.kaiju;if(g.inputAge>=.5)k.blocking=false;k.stamina=clamp(k.stamina+(k.blocking?-18:12)*dt,0,100);if(k.stamina===0)k.blocking=false;if(g.inputAge<.5){const speed=(g.slow>0?g.rules.speed*.4:g.rules.speed)*(k.blocking?.45:1);k.x=clamp(k.x+g.input.x*speed*dt,-36,36);k.z=clamp(k.z+g.input.z*speed*dt,-36,36);k.yaw=g.input.yaw;}
  for(const car of g.cars){
@@ -124,6 +129,7 @@ export function tick(g,dt){
    const damaged=g.buildings.filter(b=>b.hp>0&&b.hp<b.max).sort((a,b)=>distance(a,u)-distance(b,u));const target=u.order||damaged[0];if(target){const travel=distance(u,target);if(travel>(u.order?.2:4)){const step=Math.min(travel,3.5*dt);u.x+=(target.x-u.x)/travel*step;u.z+=(target.z-u.z)/travel*step;}}
    u.fire-=dt;const b=damaged.find(b=>distance(b,u)<6);if(b&&u.fire<=0){b.hp=Math.min(b.max,b.hp+(facilityOnline(g,'hospital')?8:4));u.fire=1;effect(g,'repair',b.x,b.z,3,1);}if(d<2)u.hp-=35*g.rules.power*dt;continue;
   }
+  if(u.type==='robot'){const target=u.order||k,travel=distance(u,target);if(travel>(u.order?.2:7)){const step=Math.min(travel,2.5*dt);u.x+=(target.x-u.x)/travel*step;u.z+=(target.z-u.z)/travel*step;}u.fire-=dt;if(d<11&&u.fire<=0){hurtKaiju(g,32,u);u.fire=1.6;effect(g,'shot',u.x,u.z,3,7,{targetX:k.x,targetZ:k.z,targetY:8});}if(d<2)u.hp-=35*g.rules.power*dt;continue;}
   if(u.type==='tank'){const target=u.order||k,travel=distance(u,target);if(travel>(u.order?.2:9)){const step=Math.min(travel,3*dt);u.x+=(target.x-u.x)/travel*step;u.z+=(target.z-u.z)/travel*step;}}
   u.fire-=dt;if(d<(u.type==='tank'?18:25)&&u.fire<=0){hurtKaiju(g,u.type==='tank'?9:14,u);u.fire=u.type==='turret'&&!facilityOnline(g,'power')?2:1;effect(g,'shot',u.x,u.z,1,1,{targetX:k.x,targetZ:k.z,targetY:8});}
   if(d<2)u.hp-=35*g.rules.power*dt;
@@ -140,12 +146,13 @@ function runAI(g,dt){
  if(!g.botRole)return;const ai=g.ai,k=g.kaiju;
  if(g.botRole==='defender'){
   if(g.elapsed<ai.next)return;ai.next=g.elapsed+(g.mode==='campaign'?4:2.5);
-  const damaged=g.buildings.filter(b=>b.hp>0&&b.hp<55).sort((a,b)=>a.hp-b.hp)[0];
-  if(damaged&&g.rules.tools.includes('repair')&&g.credits>=65){command(g,'defender',{type:'repair',x:damaged.x,z:damaged.z});return;}
-  if(g.units.length>=10)return;
-  const choices=g.rules.tools.filter(t=>['tank','turret','crew'].includes(t)),type=choices[Math.floor(g.elapsed/4)%choices.length];
-  const anchor=type==='crew'?(damaged||g.buildings.find(b=>b.facility==='hospital')):k;
-  const angle=g.elapsed*.7,x=clamp(anchor.x+Math.cos(angle)*15,-32,32),z=clamp(anchor.z+Math.sin(angle)*15,-32,32);command(g,'defender',{type,x,z});return;
+  const damaged=g.buildings.filter(b=>b.hp>0&&b.hp<75).sort((a,b)=>a.hp-b.hp)[0];
+  for(let slot=0;slot<3;slot++){const type=g.hand[slot];if(!type)continue;
+   if(type==='repair'&&!damaged||type==='robot'&&g.robotUsed){command(g,'defender',{type:'discard',slot});continue;}
+   const anchor=type==='repair'?damaged:type==='crew'?(damaged||k):k,angle=g.elapsed*.7;
+   const target=['repair','freeze','missile'].includes(type)?anchor:{x:clamp(anchor.x+Math.cos(angle)*15,-32,32),z:clamp(anchor.z+Math.sin(angle)*15,-32,32)};
+   if(!command(g,'defender',{type,x:target.x,z:target.z}))return;
+  }return;
  }
  let target=g.buildings.find(b=>b.id===ai.targetId&&b.hp>0);
  if(!target){target=g.buildings.filter(b=>b.hp>0).sort((a,b)=>distance(a,k)-(g.rules.facilitiesWin&&a.facility?9:0)-distance(b,k)+(g.rules.facilitiesWin&&b.facility?9:0))[0];ai.targetId=target?.id;}
@@ -159,3 +166,6 @@ function runAI(g,dt){
  if(g.cool[attack]>0||k.stamina<ATTACK_COST[attack])return;
  ai.intent=attack;ai.resolveAt=g.elapsed+.85;effect(g,'warning',target.x,target.z,attack==='stomp'?12:7,0,{attack,ttl:.85});
 }
+
+// Spent cards go to the back; one replacement is drawn every five seconds.
+function cycleCard(g,slot){g.deck.push(g.hand[slot]);g.hand[slot]=null;g.drawQueue.push({slot,wait:5});}
